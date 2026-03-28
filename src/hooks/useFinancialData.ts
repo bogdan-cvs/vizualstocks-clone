@@ -9,13 +9,12 @@ interface UseFinancialDataReturn {
 }
 
 export function useFinancialData(ticker: string | undefined): UseFinancialDataReturn {
-  const [data, setData] = useState<{
-    quarter: FinancialData | null;
-    annual: FinancialData | null;
-  }>({ quarter: null, annual: null });
+  const [data, setData] = useState<{ quarter: FinancialData | null; annual: FinancialData | null }>(
+    { quarter: null, annual: null }
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const abortRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!ticker) {
@@ -25,29 +24,37 @@ export function useFinancialData(ticker: string | undefined): UseFinancialDataRe
       return;
     }
 
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
-
+    abortRef.current = false;
     let cancelled = false;
 
     async function load() {
       setLoading(true);
       setError(null);
       try {
-        const [quarterData, annualData] = await Promise.all([
-          fetchAllFinancialData(ticker!, "quarter"),
-          fetchAllFinancialData(ticker!, "annual"),
-        ]);
+        // Fetch annual first (free tier), then try quarterly
+        const annualData = await fetchAllFinancialData(ticker!, "annual");
+        if (!cancelled) {
+          setData((prev) => ({ ...prev, annual: annualData }));
+          if (!annualData.profile) {
+            setError(`Ticker "${ticker}" not found.`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        const quarterData = await fetchAllFinancialData(ticker!, "quarter");
         if (!cancelled) {
           setData({ quarter: quarterData, annual: annualData });
-          if (!quarterData.profile) {
-            setError(`Ticker "${ticker}" not found.`);
-          }
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to fetch data");
+          const msg = err instanceof Error ? err.message : "Failed to fetch data";
+          // If quarterly fails (402), keep annual data and show partial error
+          if (msg.includes("402") || msg.includes("Premium") || msg.includes("subscription")) {
+            setError("Quarterly data requires FMP paid plan. Showing annual data only.");
+          } else {
+            setError(msg);
+          }
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -55,11 +62,7 @@ export function useFinancialData(ticker: string | undefined): UseFinancialDataRe
     }
 
     load();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
+    return () => { cancelled = true; };
   }, [ticker]);
 
   return { data, loading, error };
