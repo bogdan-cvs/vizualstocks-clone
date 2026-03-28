@@ -14,7 +14,6 @@ export interface CompanyProfile {
 export interface IncomeStatement {
   date: string;
   period: string;
-  calendarYear: string;
   revenue: number;
   grossProfit: number;
   grossProfitRatio: number;
@@ -24,14 +23,11 @@ export interface IncomeStatement {
   netIncomeRatio: number;
   eps: number;
   epsdiluted: number;
-  weightedAverageShsOut: number;
-  weightedAverageShsOutDil: number;
 }
 
 export interface BalanceSheet {
   date: string;
   period: string;
-  calendarYear: string;
   cashAndCashEquivalents: number;
   totalDebt: number;
   totalAssets: number;
@@ -42,7 +38,6 @@ export interface BalanceSheet {
 export interface CashFlowStatement {
   date: string;
   period: string;
-  calendarYear: string;
   operatingCashFlow: number;
   capitalExpenditure: number;
   freeCashFlow: number;
@@ -51,13 +46,8 @@ export interface CashFlowStatement {
 export interface KeyMetrics {
   date: string;
   period: string;
-  calendarYear: string;
-  revenuePerShare: number;
-  netIncomePerShare: number;
   debtToEquity: number;
   returnOnEquity: number;
-  currentRatio: number;
-  priceToEarningsRatio: number;
 }
 
 export interface FinancialData {
